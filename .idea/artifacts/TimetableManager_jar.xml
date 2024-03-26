@@ -1,0 +1,8 @@
+<component name="ArtifactManager">
+  <artifact type="jar" name="TimetableManager:jar">
+    <output-path>$PROJECT_DIR$/out/artifacts/TimetableManager_jar</output-path>
+    <root id="archive" name="TimetableManager.jar">
+      <element id="module-output" name="TimetableManager" />
+    </root>
+  </artifact>
+</component>

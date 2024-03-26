@@ -1,7 +1,4 @@
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Comparator;
-import java.util.Random;
+import java.util.*;
 
 public class main {
     public static void main(String[] args) {
@@ -35,23 +32,37 @@ public class main {
 //        }
         System.out.println(simLessons.length + " SimLessons found!");
         System.out.println(Arrays.deepToString(simLessons[0]));
-        int[][][] solution = TimetableManager.findTimetableSolutions(simLessons, true);
-        if(solution == null){
-            System.out.println("Solution search failed.");
-        } else{
-            System.out.println("Solution found!");
-            for(int i = 0; i < solution.length;i++){
-                String line = (i+1) + ": ";
-                for(int j = 0;j < solution[i].length;j++){
-                    line += "[" + solution[i][j][0] + ", " + solution[i][j][1] + "]";
+        int iter = 0;
+        while(iter < 10) {
+            int[][][] solution = TimetableManager.findTimetableSolutions(simLessons, true);
+            if (solution == null) {
+                System.out.println("Solution search failed.");
+                System.out.println("Reshuffling and searching again.");
+                TimetableManager.shuffleAndSortSimLessons(simLessons);
+                iter++;
+                continue;
+            } else if(solution.length > 12){
+                System.out.println("Solution found, but too long. Length: " + solution.length);
+                System.out.println("Solution search failed.");
+                System.out.println("Reshuffling and searching again.");
+                TimetableManager.shuffleAndSortSimLessons(simLessons);
+                continue;
+            } else {
+                System.out.println("Solution found!");
+                for (int i = 0; i < solution.length; i++) {
+                    String line = (i + 1) + ": ";
+                    for (int j = 0; j < solution[i].length; j++) {
+                        //line += "[" + solution[i][j][0] + ", " + solution[i][j][1] + "]";
+                        line += TimetableManager.getClassName(solution[i][j][0], solution[i][j][1]) + " ";
+                    }
+                    System.out.println(line);
                 }
-                System.out.println(line);
+                System.out.println(solution.length);
+                break;
+
+                //TimetableManager.OptimiseStudents(students, classStudentList, 100, 100,20, true, true);
             }
-            System.out.println(solution.length);
-
-            //TimetableManager.OptimiseStudents(students, classStudentList, 100, 100,20, true, true);
         }
-
     }
 }
 
@@ -123,16 +134,20 @@ class Student{
     }
 }
 class TimetableManager{
-    public String[] classNames = new String[]{"M", "FM", "P", "CS", "C", "B"};
+    public static String[] classNames = new String[]{"M", "FM", "P", "CS", "C", "B"};
 
     static Random rn = new Random();
     public static int[] classN = new int[]{4,4,3,2,2,1};
     public static int[] lessonN = new int[]{2,2,3,3,3,3};
-    public static int[] simLessonsLimit = new int[]{2,2,1,1,1,1};
+    public static int[] simLessonsLimit = new int[]{1,1,1,1,1,1};
 
     public static int recursionLimit = 1000000000;
     static int recursionCounter = 0;
 
+
+    public static String getClassName(int i, int j){
+        return classNames[i] +j;
+    }
     public static ArrayList<Student>[][] putStudentsIntoClasses(Student[] students){
         int[] stats = new int[]{0,0,0,0,0,0};
         ArrayList<Student>[][] classStudentList = new ArrayList[classN.length][];
@@ -150,6 +165,20 @@ class TimetableManager{
             }
         }
         return classStudentList;
+    }
+
+    public static void shuffleAndSortSimLessons(int[][][] simLessons){
+        ArrayList<int[][]> toShuffle = new ArrayList<>(Arrays.asList(simLessons));
+        Collections.shuffle(toShuffle);
+        for(int i = 0; i < simLessons.length;i++){
+            simLessons[i] = toShuffle.get(i);
+        }
+        Arrays.sort(simLessons, new Comparator<int[][]>() {
+            @Override
+            public int compare(int[][] o1, int[][] o2) {
+                return Integer.compare(o2.length, o1.length);
+            }
+        });
     }
     public static void MoveStudent(ArrayList<Student>[][] classStudentList, int subjectIndex,int sourceClassIndex, int targetClassIndex, int studentIndex){
         {
@@ -200,19 +229,19 @@ class TimetableManager{
 //                fitness += Math.abs(student1.subjectsTaken.length/2 - countMutualClasses);
 //            }
 //        }
-//        for(int i = 0; i < classN.length;i++){
-//            int[] classSizes = new int[classN[i]];
-//            double mean = 0;
-//            double variance = 0;
-//            for(int j = 0; j < classN[i];j++){
-//                classSizes[j] = classStudentList[i][j].size();
-//                mean += (double) classSizes[j] /classN[i];
-//            }
-//            for(int j = 0; j < classN[i];j++){
-//                variance += Math.pow(mean-classSizes[j], 2)/classN[i];
-//            }
-//            //fitness -= Math.pow(variance,2);
-//        }
+        for(int i = 0; i < classN.length;i++){
+            int[] classSizes = new int[classN[i]];
+            double mean = 0;
+            double variance = 0;
+            for(int j = 0; j < classN[i];j++){
+                classSizes[j] = classStudentList[i][j].size();
+                mean += (double) classSizes[j] /classN[i];
+            }
+            for(int j = 0; j < classN[i];j++){
+                variance += Math.pow(mean-classSizes[j], 2)/classN[i];
+            }
+            //fitness -= Math.pow(variance/10,2);
+        }
         fitness += findSimLessonsRecursively(classStudentList, new ArrayList<>()).length;
         return fitness;
     }
@@ -288,19 +317,19 @@ class TimetableManager{
         for(int i = 0; i < returnArray.length;i++){
             returnArray[i] = returnedList.get(i);
         }
-        Arrays.sort(returnArray, new Comparator<int[][]>() {
-            @Override
-            public int compare(int[][] o1, int[][] o2) {
-                return Integer.compare(o2.length, o1.length);
-            }
-        });
+        shuffleAndSortSimLessons(returnArray);
         return returnArray;
     }
 
 
     public static int[][] findSimLessonsFromExisting(ArrayList<Student>[][] classStudentList, int[][] currentLessons){
         ArrayList<int[]> validLessonsList = new ArrayList<>();
+        int[] stats = new int[classN.length];
+        for (int[] lesson : currentLessons) {
+            stats[lesson[0]]++;
+        }
         for(int i = 0; i < classStudentList.length;i++){
+            if(stats[i] >= simLessonsLimit[i])continue;
             for(int j = 0; j < classStudentList[i].length;j++){
                 ArrayList<Student> studentClass = classStudentList[i][j];
                 boolean valid = true;
